@@ -1,11 +1,12 @@
 'use client';
 
 /**
- * Vendor Dashboard Page
+ * Vendor Dashboard Page - Minimalist Design
  */
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import {
   Store,
@@ -16,14 +17,23 @@ import {
   Plus,
   Eye,
   Edit,
-  AlertCircle,
   Settings,
+  ChevronRight,
+  BarChart3,
+  Users,
+  ArrowUpRight,
+  ArrowDownRight,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { apiRequest } from '@/lib/api-client';
 import { VENDOR_ENDPOINTS } from '@/lib/api-config';
 import { formatPrice, formatDate } from '@/lib/utils';
 import { PageLoading } from '@/components/ui/LoadingSpinner';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
+import { cn } from '@/lib/cn';
 import { Product } from '@/lib/types';
 import toast from 'react-hot-toast';
 
@@ -72,17 +82,14 @@ export default function VendorDashboardPage() {
       if (!isAuthenticated || user?.role !== 'vendor') return;
 
       try {
-        // Fetch vendor products
         const productsRes = await apiRequest<Product[] | { results: Product[] }>(VENDOR_ENDPOINTS.MY_PRODUCTS);
         const productList = Array.isArray(productsRes.data) ? productsRes.data : productsRes.data.results;
         setProducts(productList.slice(0, 5));
 
-        // Fetch vendor orders
         const ordersRes = await apiRequest<VendorOrder[] | { results: VendorOrder[] }>(VENDOR_ENDPOINTS.MY_ORDERS);
         const ordersList = Array.isArray(ordersRes.data) ? ordersRes.data : ordersRes.data.results;
         setOrders(ordersList.slice(0, 5));
 
-        // Calculate stats
         setStats({
           total_products: productList.length,
           active_products: productList.filter((p: Product) => p.is_active).length,
@@ -94,7 +101,6 @@ export default function VendorDashboardPage() {
         });
       } catch (error: any) {
         console.error('Failed to fetch vendor data:', error);
-        // If 403, user has vendor role but no vendor_profile - redirect to setup
         if (error?.response?.status === 403 || error?.status === 403) {
           router.push('/vendor/setup');
           return;
@@ -123,227 +129,293 @@ export default function VendorDashboardPage() {
       icon: Package,
       label: 'Total Products',
       value: stats.total_products,
-      color: 'bg-blue-100 text-blue-600',
+      change: '+12%',
+      trend: 'up',
+      color: 'bg-blue-50 text-blue-600',
     },
     {
       icon: Eye,
       label: 'Active Products',
       value: stats.active_products,
-      color: 'bg-green-100 text-green-600',
+      change: '+8%',
+      trend: 'up',
+      color: 'bg-emerald-50 text-emerald-600',
     },
     {
       icon: ShoppingCart,
       label: 'Pending Orders',
       value: stats.pending_orders,
-      color: 'bg-yellow-100 text-yellow-600',
+      change: '-3%',
+      trend: 'down',
+      color: 'bg-amber-50 text-amber-600',
     },
     {
       icon: DollarSign,
       label: 'Total Revenue',
       value: formatPrice(stats.total_revenue),
-      color: 'bg-purple-100 text-purple-600',
+      change: '+23%',
+      trend: 'up',
+      color: 'bg-violet-50 text-violet-600',
     },
   ];
 
+  const quickActions = [
+    {
+      icon: Package,
+      label: 'Manage Products',
+      description: 'Edit, add, or remove products',
+      href: '/vendor/products',
+      color: 'bg-blue-50 text-blue-600 group-hover:bg-blue-100',
+    },
+    {
+      icon: ShoppingCart,
+      label: 'View Orders',
+      description: 'Process and track orders',
+      href: '/vendor/orders',
+      color: 'bg-emerald-50 text-emerald-600 group-hover:bg-emerald-100',
+    },
+    {
+      icon: Settings,
+      label: 'Store Settings',
+      description: 'Update store information',
+      href: '/vendor/settings',
+      color: 'bg-violet-50 text-violet-600 group-hover:bg-violet-100',
+    },
+  ];
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'pending':
+        return 'bg-amber-100 text-amber-700';
+      case 'shipped':
+        return 'bg-blue-100 text-blue-700';
+      case 'delivered':
+        return 'bg-emerald-100 text-emerald-700';
+      case 'confirmed':
+        return 'bg-indigo-100 text-indigo-700';
+      default:
+        return 'bg-neutral-100 text-neutral-700';
+    }
+  };
+
   return (
-    <div className="container-custom py-8">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-        <div className="flex items-center gap-4">
-          <div className="p-3 bg-primary-100 rounded-lg">
-            <Store className="h-8 w-8 text-primary-600" />
+    <div className="min-h-screen bg-neutral-50">
+      <div className="container-custom py-8 animate-fade-in">
+        {/* Header */}
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-8 animate-fade-in-up">
+          <div className="flex items-center gap-4">
+            <div className="p-3 bg-neutral-900 rounded-2xl">
+              <Store className="h-7 w-7 text-white" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-semibold text-neutral-900">Vendor Dashboard</h1>
+              <p className="text-neutral-500">Manage your store and products</p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Vendor Dashboard</h1>
-            <p className="text-gray-500">Manage your store and products</p>
-          </div>
+
+          <Button asChild>
+            <Link href="/vendor/products/new">
+              <Plus className="h-4 w-4 mr-2" />
+              Add Product
+            </Link>
+          </Button>
         </div>
 
-        <Link href="/vendor/products/new" className="btn-primary flex items-center gap-2">
-          <Plus className="h-5 w-5" />
-          Add Product
-        </Link>
-      </div>
-
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        {statCards.map((stat) => (
-          <div key={stat.label} className="card p-6">
-            <div className="flex items-center gap-4">
-              <div className={`p-3 rounded-lg ${stat.color}`}>
-                <stat.icon className="h-6 w-6" />
-              </div>
-              <div>
-                <p className="text-sm text-gray-500">{stat.label}</p>
-                <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Recent Products */}
-        <div className="card p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-gray-900">Recent Products</h2>
-            <Link
-              href="/vendor/products"
-              className="text-sm text-primary-600 hover:text-primary-700"
+        {/* Stats Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+          {statCards.map((stat, index) => (
+            <Card 
+              key={stat.label} 
+              className="animate-fade-in-up hover:shadow-md transition-all duration-300"
+              style={{ animationDelay: `${index * 75}ms` }}
             >
-              View All
-            </Link>
-          </div>
-
-          {products.length === 0 ? (
-            <div className="text-center py-8">
-              <Package className="h-12 w-12 mx-auto text-gray-300" />
-              <p className="text-gray-500 mt-2">No products yet</p>
-              <Link
-                href="/vendor/products/new"
-                className="btn-primary mt-4 inline-block"
-              >
-                Add Your First Product
-              </Link>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {products.map((product) => (
-                <div
-                  key={product.id}
-                  className="flex items-center gap-4 p-3 rounded-lg hover:bg-gray-50"
-                >
-                  <div className="w-12 h-12 bg-gray-100 rounded flex-shrink-0" />
-                  <div className="flex-grow min-w-0">
-                    <p className="font-medium text-gray-900 truncate">{product.name}</p>
-                    <p className="text-sm text-gray-500">
-                      {formatPrice(product.price)} • Stock: {product.stock}
-                    </p>
+              <CardContent className="p-5">
+                <div className="flex items-start justify-between">
+                  <div className={cn('p-2.5 rounded-xl', stat.color)}>
+                    <stat.icon className="h-5 w-5" />
                   </div>
-                  <div className="flex items-center gap-2">
-                    <span
-                      className={`px-2 py-1 text-xs rounded ${
-                        product.is_active
-                          ? 'bg-green-100 text-green-800'
-                          : 'bg-gray-100 text-gray-800'
-                      }`}
-                    >
-                      {product.is_active ? 'Active' : 'Inactive'}
-                    </span>
-                    <Link
-                      href={`/vendor/products/${product.id}/edit`}
-                      className="p-2 hover:bg-gray-100 rounded"
-                    >
-                      <Edit className="h-4 w-4 text-gray-500" />
-                    </Link>
+                  <div className={cn(
+                    'flex items-center gap-1 text-xs font-medium',
+                    stat.trend === 'up' ? 'text-emerald-600' : 'text-red-600'
+                  )}>
+                    {stat.trend === 'up' ? (
+                      <ArrowUpRight className="h-3 w-3" />
+                    ) : (
+                      <ArrowDownRight className="h-3 w-3" />
+                    )}
+                    {stat.change}
                   </div>
                 </div>
-              ))}
-            </div>
-          )}
+                <div className="mt-4">
+                  <p className="text-2xl font-semibold text-neutral-900">{stat.value}</p>
+                  <p className="text-sm text-neutral-500 mt-1">{stat.label}</p>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
         </div>
 
-        {/* Recent Orders */}
-        <div className="card p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-gray-900">Recent Orders</h2>
-            <Link
-              href="/vendor/orders"
-              className="text-sm text-primary-600 hover:text-primary-700"
-            >
-              View All
-            </Link>
-          </div>
-
-          {orders.length === 0 ? (
-            <div className="text-center py-8">
-              <ShoppingCart className="h-12 w-12 mx-auto text-gray-300" />
-              <p className="text-gray-500 mt-2">No orders yet</p>
-              <p className="text-sm text-gray-400">
-                Orders will appear here when customers purchase your products
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {orders.map((order) => (
-                <Link
-                  key={order.id}
-                  href={`/vendor/orders/${order.id}`}
-                  className="block p-3 rounded-lg hover:bg-gray-50"
-                >
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-medium text-gray-900">#{order.order_number}</p>
-                      <p className="text-sm text-gray-500">{order.product_name}</p>
-                      <p className="text-xs text-gray-400">
-                        {formatDate(order.created_at)}
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-semibold">{formatPrice(order.subtotal)}</p>
-                      <span
-                        className={`text-xs px-2 py-1 rounded ${
-                          order.status === 'pending'
-                            ? 'bg-yellow-100 text-yellow-800'
-                            : order.status === 'shipped'
-                            ? 'bg-blue-100 text-blue-800'
-                            : order.status === 'delivered'
-                            ? 'bg-green-100 text-green-800'
-                            : 'bg-gray-100 text-gray-800'
-                        }`}
-                      >
-                        {order.status}
-                      </span>
-                    </div>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+          {/* Recent Products */}
+          <Card className="lg:col-span-2 animate-fade-in-up" style={{ animationDelay: '150ms' }}>
+            <CardHeader className="flex flex-row items-center justify-between pb-4">
+              <div>
+                <CardTitle className="text-lg">Recent Products</CardTitle>
+                <CardDescription>Your latest product listings</CardDescription>
+              </div>
+              <Link
+                href="/vendor/products"
+                className="text-sm text-neutral-500 hover:text-neutral-900 flex items-center gap-1 transition-colors"
+              >
+                View All
+                <ChevronRight className="h-4 w-4" />
+              </Link>
+            </CardHeader>
+            <CardContent>
+              {products.length === 0 ? (
+                <div className="text-center py-12">
+                  <div className="w-16 h-16 bg-neutral-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                    <Package className="h-8 w-8 text-neutral-400" />
                   </div>
-                </Link>
-              ))}
-            </div>
-          )}
+                  <p className="text-neutral-500 mb-4">No products yet</p>
+                  <Button asChild size="sm">
+                    <Link href="/vendor/products/new">Add Your First Product</Link>
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {products.map((product) => {
+                    const imageUrl = product.primary_image?.image || product.images?.[0]?.image;
+                    const fullImageUrl = imageUrl ? (imageUrl.startsWith('http') ? imageUrl : `http://localhost:8000${imageUrl}`) : null;
+                    const isActive = product.is_active === true;
+                    
+                    return (
+                    <div
+                      key={product.id}
+                      className="flex items-center gap-4 p-3 rounded-xl hover:bg-neutral-50 transition-colors group"
+                    >
+                      <div className="w-14 h-14 bg-neutral-100 rounded-xl flex-shrink-0 overflow-hidden">
+                        {fullImageUrl ? (
+                          <Image
+                            src={fullImageUrl}
+                            alt={product.name}
+                            width={56}
+                            height={56}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center">
+                            <Package className="h-6 w-6 text-neutral-400" />
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex-grow min-w-0">
+                        <p className="font-medium text-neutral-900 truncate">{product.name}</p>
+                        <p className="text-sm text-neutral-500">
+                          {formatPrice(product.price)} • Stock: {product.stock}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <Badge 
+                          variant={isActive ? 'success' : 'secondary'}
+                          className="hidden sm:inline-flex"
+                        >
+                          {isActive ? 'Active' : 'Inactive'}
+                        </Badge>
+                        <Link
+                          href={`/vendor/products/${product.id}/edit`}
+                          className="p-2 rounded-lg hover:bg-neutral-100 opacity-0 group-hover:opacity-100 transition-all"
+                        >
+                          <Edit className="h-4 w-4 text-neutral-500" />
+                        </Link>
+                      </div>
+                    </div>
+                    );
+                  })}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Recent Orders */}
+          <Card className="animate-fade-in-up" style={{ animationDelay: '225ms' }}>
+            <CardHeader className="flex flex-row items-center justify-between pb-4">
+              <div>
+                <CardTitle className="text-lg">Recent Orders</CardTitle>
+                <CardDescription>Latest customer orders</CardDescription>
+              </div>
+              <Link
+                href="/vendor/orders"
+                className="text-sm text-neutral-500 hover:text-neutral-900 flex items-center gap-1 transition-colors"
+              >
+                View All
+                <ChevronRight className="h-4 w-4" />
+              </Link>
+            </CardHeader>
+            <CardContent>
+              {orders.length === 0 ? (
+                <div className="text-center py-12">
+                  <div className="w-16 h-16 bg-neutral-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                    <ShoppingCart className="h-8 w-8 text-neutral-400" />
+                  </div>
+                  <p className="text-neutral-500">No orders yet</p>
+                  <p className="text-sm text-neutral-400 mt-1">
+                    Orders will appear here
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {orders.map((order) => (
+                    <Link
+                      key={order.id}
+                      href="/vendor/orders"
+                      className="block p-3 rounded-xl hover:bg-neutral-50 transition-colors"
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <p className="font-medium text-neutral-900">#{order.order_number}</p>
+                        <Badge className={getStatusColor(order.status)}>
+                          {order.status}
+                        </Badge>
+                      </div>
+                      <p className="text-sm text-neutral-500 truncate">{order.product_name}</p>
+                      <div className="flex items-center justify-between mt-2">
+                        <p className="text-xs text-neutral-400">{formatDate(order.created_at)}</p>
+                        <p className="font-semibold text-neutral-900">{formatPrice(order.subtotal)}</p>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </div>
-      </div>
 
-      {/* Quick Actions */}
-      <div className="mt-8 grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <Link
-          href="/vendor/products"
-          className="card p-4 flex items-center gap-4 hover:shadow-lg transition-shadow"
-        >
-          <div className="p-3 bg-blue-100 rounded-lg">
-            <Package className="h-6 w-6 text-blue-600" />
-          </div>
-          <div>
-            <p className="font-semibold text-gray-900">Manage Products</p>
-            <p className="text-sm text-gray-500">Edit, add, or remove products</p>
-          </div>
-        </Link>
-
-        <Link
-          href="/vendor/orders"
-          className="card p-4 flex items-center gap-4 hover:shadow-lg transition-shadow"
-        >
-          <div className="p-3 bg-green-100 rounded-lg">
-            <ShoppingCart className="h-6 w-6 text-green-600" />
-          </div>
-          <div>
-            <p className="font-semibold text-gray-900">View Orders</p>
-            <p className="text-sm text-gray-500">Process and track orders</p>
-          </div>
-        </Link>
-
-        <Link
-          href="/vendor/settings"
-          className="card p-4 flex items-center gap-4 hover:shadow-lg transition-shadow"
-        >
-          <div className="p-3 bg-purple-100 rounded-lg">
-            <Settings className="h-6 w-6 text-purple-600" />
-          </div>
-          <div>
-            <p className="font-semibold text-gray-900">Store Settings</p>
-            <p className="text-sm text-gray-500">Update store information</p>
-          </div>
-        </Link>
+        {/* Quick Actions */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          {quickActions.map((action, index) => (
+            <Link
+              key={action.href}
+              href={action.href}
+              className="animate-fade-in-up"
+              style={{ animationDelay: `${(index + 4) * 75}ms` }}
+            >
+              <Card className="h-full hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 group">
+                <CardContent className="p-5 flex items-center gap-4">
+                  <div className={cn('p-3 rounded-xl transition-colors', action.color)}>
+                    <action.icon className="h-5 w-5" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-neutral-900">{action.label}</p>
+                    <p className="text-sm text-neutral-500 truncate">{action.description}</p>
+                  </div>
+                  <ChevronRight className="h-5 w-5 text-neutral-400 group-hover:text-neutral-600 group-hover:translate-x-1 transition-all" />
+                </CardContent>
+              </Card>
+            </Link>
+          ))}
+        </div>
       </div>
     </div>
   );
 }
+

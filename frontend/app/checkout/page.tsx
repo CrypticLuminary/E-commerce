@@ -66,7 +66,7 @@ export default function CheckoutPage() {
     city: '',
     state: '',
     postal_code: '',
-    country: 'United States',
+    country: 'Bagmati',
   });
 
   useEffect(() => {
@@ -438,7 +438,7 @@ export default function CheckoutPage() {
                         />
                       </div>
                       <div className="space-y-2">
-                        <label className="text-sm font-medium text-neutral-700">Country *</label>
+                        <label className="text-sm font-medium text-neutral-700">Province *</label>
                         <select
                           name="country"
                           value={formData.country}
@@ -446,11 +446,13 @@ export default function CheckoutPage() {
                           className="w-full h-11 px-3 rounded-md border border-neutral-200 bg-white focus:outline-none focus:ring-2 focus:ring-neutral-950"
                           required
                         >
-                          <option value="United States">United States</option>
-                          <option value="Canada">Canada</option>
-                          <option value="United Kingdom">United Kingdom</option>
-                          <option value="Australia">Australia</option>
-                          <option value="India">India</option>
+                          <option value="Koshi">Koshi</option>
+                          <option value="Madhesh">Madhesh</option>
+                          <option value="Bagmati">Bagmati</option>
+                          <option value="Gandaki">Gandaki</option>
+                          <option value="Lumbini">Lumbini</option>
+                          <option value="Karnali">Karnali</option>
+                          <option value="Sudurpashchim">Sudurpashchim</option>
                         </select>
                       </div>
                     </div>

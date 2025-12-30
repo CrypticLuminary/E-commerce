@@ -212,7 +212,7 @@ export default function RegisterPage() {
                     value={formData.phone}
                     onChange={handleChange}
                     className="pl-10 h-11"
-                    placeholder="+1 (555) 123-4567"
+                    placeholder="+977 98XXXXXXXX"
                   />
                 </div>
               </div>

@@ -62,5 +62,6 @@ export const VENDOR_ENDPOINTS = {
   PROFILE: `${API_BASE_URL}/vendors/profile/`,
   DASHBOARD: `${API_BASE_URL}/vendors/dashboard/`,
   MY_PRODUCTS: `${API_BASE_URL}/products/vendor/`,
-  MY_ORDERS: `${API_BASE_URL}/orders/vendor/list/`,
+  MY_ORDERS: `${API_BASE_URL}/orders/vendor/items/`,
+  UPDATE_ORDER_ITEM_STATUS: (itemId: number) => `${API_BASE_URL}/orders/vendor/item/${itemId}/status/`,
 };

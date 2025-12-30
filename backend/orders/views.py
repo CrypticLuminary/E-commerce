@@ -319,6 +319,44 @@ class VendorOrderListView(generics.ListAPIView):
         return Order.objects.filter(id__in=order_ids).prefetch_related('items')
 
 
+class VendorOrderItemListView(APIView):
+    """
+    View for vendors to see all their order items in a flat list format.
+    Better for dashboard display.
+    """
+    permission_classes = [permissions.IsAuthenticated, IsVendor]
+    
+    def get(self, request):
+        vendor = request.user.vendor_profile
+        
+        # Get all order items belonging to this vendor
+        items = OrderItem.objects.filter(
+            product__vendor=vendor
+        ).select_related('order', 'product').order_by('-created_at')
+        
+        # Format the response
+        result = []
+        for item in items:
+            result.append({
+                'id': item.id,
+                'order_number': item.order.order_number,
+                'product_name': item.product_name,
+                'product_id': item.product_id,
+                'quantity': item.quantity,
+                'price': str(item.product_price),
+                'subtotal': str(item.subtotal),
+                'status': item.status,
+                'created_at': item.created_at.isoformat(),
+                'customer_name': item.order.customer_name,
+                'shipping_address': {
+                    'city': item.order.shipping_city,
+                    'state': item.order.shipping_state,
+                }
+            })
+        
+        return Response(result)
+
+
 class VendorOrderItemsView(APIView):
     """
     View for vendors to see their items in a specific order.

@@ -105,13 +105,13 @@ export default function ProductCard({ product, className }: ProductCardProps) {
     <Link href={`/products/${product.slug}`} className={cn("group block", className)}>
       <div className="relative bg-white rounded-2xl border border-neutral-200 overflow-hidden transition-all duration-300 hover:shadow-xl hover:border-neutral-300 hover:-translate-y-1 h-full flex flex-col">
         {/* Image Container */}
-        <div className="relative aspect-square bg-neutral-100 overflow-hidden">
+        <div className="relative aspect-square overflow-hidden">
           {hasImage ? (
             <Image
               src={fullImageUrl}
               alt={product.name}
               fill
-              className="object-cover transition-transform duration-500 group-hover:scale-110"
+              className="object-cover"
               sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
             />
           ) : (

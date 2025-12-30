@@ -79,13 +79,13 @@ export const calculateGuestCartSubtotal = (cartWithProducts: GuestCartItem[]): n
   }, 0);
 };
 
-// Format price
+// Format price (Nepali Rupees)
 export const formatPrice = (price: number | string): string => {
   const numPrice = typeof price === 'string' ? parseFloat(price) : price;
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-  }).format(numPrice);
+  return `Rs. ${new Intl.NumberFormat('en-NP', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+  }).format(numPrice)}`;
 };
 
 // Format date

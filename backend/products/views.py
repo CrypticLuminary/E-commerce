@@ -192,8 +192,9 @@ class ProductSearchView(generics.ListAPIView):
 class VendorProductListView(generics.ListCreateAPIView):
     """
     Vendor view for listing and creating their products.
+    Requires vendor to be approved to create products.
     """
-    permission_classes = [permissions.IsAuthenticated, IsVendor]
+    permission_classes = [permissions.IsAuthenticated, IsApprovedVendor]
     parser_classes = [MultiPartParser, FormParser]
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['name', 'sku']
@@ -213,8 +214,9 @@ class VendorProductListView(generics.ListCreateAPIView):
 class VendorProductDetailView(generics.RetrieveUpdateDestroyAPIView):
     """
     Vendor view for managing individual products.
+    Requires vendor to be approved.
     """
-    permission_classes = [permissions.IsAuthenticated, IsVendor]
+    permission_classes = [permissions.IsAuthenticated, IsApprovedVendor]
     
     def get_serializer_class(self):
         if self.request.method in ['PUT', 'PATCH']:
@@ -238,9 +240,10 @@ class VendorProductDetailView(generics.RetrieveUpdateDestroyAPIView):
 class VendorProductImageView(generics.CreateAPIView):
     """
     Vendor view for uploading product images.
+    Requires vendor to be approved.
     """
     serializer_class = ProductImageUploadSerializer
-    permission_classes = [permissions.IsAuthenticated, IsVendor]
+    permission_classes = [permissions.IsAuthenticated, IsApprovedVendor]
     parser_classes = [MultiPartParser, FormParser]
     
     def create(self, request, product_id):
@@ -266,8 +269,9 @@ class VendorProductImageView(generics.CreateAPIView):
 class VendorProductImageDeleteView(generics.DestroyAPIView):
     """
     Vendor view for deleting product images.
+    Requires vendor to be approved.
     """
-    permission_classes = [permissions.IsAuthenticated, IsVendor]
+    permission_classes = [permissions.IsAuthenticated, IsApprovedVendor]
     
     def get_queryset(self):
         return ProductImage.objects.filter(

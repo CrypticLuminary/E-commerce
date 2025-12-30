@@ -66,6 +66,9 @@ export interface Category {
   slug: string;
   description?: string;
   image?: string;
+  icon?: string;
+  custom_icon?: string;
+  display_icon?: string;
   parent?: number;
   order: number;
   is_active: boolean;

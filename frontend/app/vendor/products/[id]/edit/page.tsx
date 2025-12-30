@@ -1,14 +1,14 @@
 'use client';
 
 /**
- * Add New Product Page - Minimalist Design with Image Upload
+ * Edit Product Page - Minimalist Design with Image Upload
  */
 
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { useRouter } from 'next/navigation';
-import { ArrowLeft, Plus, X, Upload, ImagePlus, Package, DollarSign, Boxes, Tag } from 'lucide-react';
+import { useParams, useRouter } from 'next/navigation';
+import { ArrowLeft, Save, X, Upload, ImagePlus, Package, DollarSign, Boxes, Trash2, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { apiRequest } from '@/lib/api-client';
 import { PRODUCT_ENDPOINTS } from '@/lib/api-config';
@@ -17,9 +17,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/cn';
-import { Category } from '@/lib/types';
+import { Category, Product } from '@/lib/types';
 import toast from 'react-hot-toast';
 
 interface ProductFormData {
@@ -33,14 +32,24 @@ interface ProductFormData {
   is_active: boolean;
 }
 
-export default function NewProductPage() {
+interface ExistingImage {
+  id: number;
+  image: string;
+  is_primary: boolean;
+}
+
+export default function EditProductPage() {
+  const params = useParams();
+  const productId = params.id as string;
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [categories, setCategories] = useState<Category[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [images, setImages] = useState<{ file: File; preview: string }[]>([]);
+  const [newImages, setNewImages] = useState<{ file: File; preview: string }[]>([]);
+  const [existingImages, setExistingImages] = useState<ExistingImage[]>([]);
+  const [imagesToDelete, setImagesToDelete] = useState<number[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const [formData, setFormData] = useState<ProductFormData>({
     name: '',
@@ -55,7 +64,7 @@ export default function NewProductPage() {
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
-      router.push('/login?redirect=/vendor/products/new');
+      router.push(`/login?redirect=/vendor/products/${productId}/edit`);
       return;
     }
 
@@ -64,23 +73,70 @@ export default function NewProductPage() {
       return;
     }
 
-    fetchCategories();
-  }, [isAuthenticated, authLoading, user, router]);
+    if (isAuthenticated && user?.role === 'vendor') {
+      fetchData();
+    }
+  }, [isAuthenticated, authLoading, user, router, productId]);
 
   // Cleanup preview URLs on unmount
   useEffect(() => {
     return () => {
-      images.forEach(img => URL.revokeObjectURL(img.preview));
+      newImages.forEach(img => URL.revokeObjectURL(img.preview));
     };
-  }, [images]);
+  }, [newImages]);
 
-  const fetchCategories = async () => {
+  const fetchData = async () => {
     try {
-      const response = await apiRequest<Category[] | { results: Category[] }>(PRODUCT_ENDPOINTS.CATEGORIES);
-      const categories = Array.isArray(response.data) ? response.data : response.data.results;
+      // Fetch categories and product in parallel
+      const [categoriesRes, productRes] = await Promise.all([
+        apiRequest<Category[] | { results: Category[] }>(PRODUCT_ENDPOINTS.CATEGORIES),
+        apiRequest<Product>(`${PRODUCT_ENDPOINTS.VENDOR_PRODUCTS}${productId}/`),
+      ]);
+
+      const categories = Array.isArray(categoriesRes.data) ? categoriesRes.data : categoriesRes.data.results;
       setCategories(categories);
-    } catch (error) {
-      console.error('Failed to fetch categories:', error);
+
+      const product = productRes.data;
+      setFormData({
+        name: product.name || '',
+        description: product.description || '',
+        price: product.price?.toString() || '',
+        compare_price: product.compare_price?.toString() || '',
+        sku: product.sku || '',
+        stock: product.stock?.toString() || '0',
+        category_id: product.category?.id?.toString() || '',
+        is_active: product.is_active ?? true,
+      });
+
+      // Set existing images
+      const images: ExistingImage[] = [];
+      if (product.primary_image) {
+        images.push({
+          id: product.primary_image.id,
+          image: product.primary_image.image,
+          is_primary: true,
+        });
+      }
+      if (product.images) {
+        product.images.forEach((img: any) => {
+          if (!images.find(i => i.id === img.id)) {
+            images.push({
+              id: img.id,
+              image: img.image,
+              is_primary: img.is_primary || false,
+            });
+          }
+        });
+      }
+      setExistingImages(images);
+    } catch (error: any) {
+      console.error('Failed to fetch data:', error);
+      if (error?.response?.status === 404) {
+        toast.error('Product not found');
+        router.push('/vendor/products');
+      } else {
+        toast.error('Failed to load product');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -114,21 +170,37 @@ export default function NewProductPage() {
       return true;
     });
 
-    const newImages = validFiles.map(file => ({
+    const totalImages = existingImages.length - imagesToDelete.length + newImages.length;
+    const remaining = 5 - totalImages;
+    
+    if (remaining <= 0) {
+      toast.error('Maximum 5 images allowed');
+      return;
+    }
+
+    const imagesToAdd = validFiles.slice(0, remaining).map(file => ({
       file,
       preview: URL.createObjectURL(file),
     }));
 
-    setImages(prev => [...prev, ...newImages].slice(0, 5)); // Max 5 images
+    setNewImages(prev => [...prev, ...imagesToAdd]);
   };
 
-  const removeImage = (index: number) => {
-    setImages(prev => {
-      const newImages = [...prev];
-      URL.revokeObjectURL(newImages[index].preview);
-      newImages.splice(index, 1);
-      return newImages;
+  const removeNewImage = (index: number) => {
+    setNewImages(prev => {
+      const newImgs = [...prev];
+      URL.revokeObjectURL(newImgs[index].preview);
+      newImgs.splice(index, 1);
+      return newImgs;
     });
+  };
+
+  const markImageForDeletion = (imageId: number) => {
+    setImagesToDelete(prev => [...prev, imageId]);
+  };
+
+  const restoreImage = (imageId: number) => {
+    setImagesToDelete(prev => prev.filter(id => id !== imageId));
   };
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -148,6 +220,11 @@ export default function NewProductPage() {
     addImages(files);
   };
 
+  const getImageUrl = (imagePath: string) => {
+    if (imagePath.startsWith('http')) return imagePath;
+    return `http://localhost:8000${imagePath}`;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -161,53 +238,78 @@ export default function NewProductPage() {
       return;
     }
 
-    if (!formData.category_id) {
-      toast.error('Please select a category');
-      return;
-    }
-
     setIsSubmitting(true);
 
     try {
-      // Create FormData for multipart/form-data submission
-      const submitData = new FormData();
-      submitData.append('name', formData.name);
-      submitData.append('description', formData.description);
-      submitData.append('price', formData.price);
-      if (formData.compare_price) {
-        submitData.append('compare_price', formData.compare_price);
-      }
-      if (formData.sku) {
-        submitData.append('sku', formData.sku);
-      }
-      submitData.append('stock', formData.stock || '0');
-      submitData.append('category', formData.category_id);
-      submitData.append('is_active', String(formData.is_active));
-
-      // Add images - all images go to 'images' field
-      images.forEach((img) => {
-        submitData.append('images', img.file);
-      });
-
-      await apiRequest(PRODUCT_ENDPOINTS.VENDOR_PRODUCTS, {
-        method: 'POST',
-        data: submitData,
-        headers: {
-          'Content-Type': 'multipart/form-data',
+      // Update product data
+      await apiRequest(`${PRODUCT_ENDPOINTS.VENDOR_PRODUCTS}${productId}/`, {
+        method: 'PATCH',
+        data: {
+          name: formData.name,
+          description: formData.description,
+          price: formData.price,
+          compare_price: formData.compare_price || null,
+          sku: formData.sku || null,
+          stock: parseInt(formData.stock) || 0,
+          category: formData.category_id || null,
+          is_active: formData.is_active,
         },
       });
 
-      toast.success('Product created successfully!');
+      // Delete marked images
+      for (const imageId of imagesToDelete) {
+        try {
+          await apiRequest(`${PRODUCT_ENDPOINTS.VENDOR_PRODUCTS}images/${imageId}/`, {
+            method: 'DELETE',
+          });
+        } catch (err) {
+          console.error(`Failed to delete image ${imageId}:`, err);
+        }
+      }
+
+      // Upload new images
+      if (newImages.length > 0) {
+        for (const img of newImages) {
+          const formData = new FormData();
+          formData.append('image', img.file);
+          try {
+            await apiRequest(`${PRODUCT_ENDPOINTS.VENDOR_PRODUCTS}${productId}/images/`, {
+              method: 'POST',
+              data: formData,
+              headers: {
+                'Content-Type': 'multipart/form-data',
+              },
+            });
+          } catch (err) {
+            console.error('Failed to upload image:', err);
+          }
+        }
+      }
+
+      toast.success('Product updated successfully!');
       router.push('/vendor/products');
     } catch (error: any) {
-      console.error('Failed to create product:', error);
+      console.error('Failed to update product:', error);
       const errorMsg = error.response?.data?.detail || 
                        error.response?.data?.message ||
                        (typeof error.response?.data === 'object' ? JSON.stringify(error.response?.data) : null) ||
-                       'Failed to create product';
+                       'Failed to update product';
       toast.error(errorMsg);
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleToggleStatus = async () => {
+    try {
+      await apiRequest(`${PRODUCT_ENDPOINTS.VENDOR_PRODUCTS}${productId}/`, {
+        method: 'PATCH',
+        data: { is_active: !formData.is_active },
+      });
+      setFormData(prev => ({ ...prev, is_active: !prev.is_active }));
+      toast.success(`Product ${!formData.is_active ? 'activated' : 'deactivated'}`);
+    } catch (error) {
+      toast.error('Failed to update status');
     }
   };
 
@@ -218,6 +320,9 @@ export default function NewProductPage() {
   if (!isAuthenticated || !user || user.role !== 'vendor') {
     return null;
   }
+
+  const visibleExistingImages = existingImages.filter(img => !imagesToDelete.includes(img.id));
+  const totalImageCount = visibleExistingImages.length + newImages.length;
 
   return (
     <div className="min-h-screen bg-neutral-50">
@@ -232,14 +337,39 @@ export default function NewProductPage() {
         </Link>
 
         {/* Header */}
-        <div className="flex items-center gap-4 mb-8 animate-fade-in-up">
-          <div className="p-3 bg-neutral-900 rounded-2xl">
-            <Plus className="h-6 w-6 text-white" />
+        <div className="flex items-center justify-between gap-4 mb-8 animate-fade-in-up">
+          <div className="flex items-center gap-4">
+            <div className="p-3 bg-neutral-900 rounded-2xl">
+              <Package className="h-6 w-6 text-white" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-semibold text-neutral-900">Edit Product</h1>
+              <p className="text-neutral-500">Update your product details</p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-2xl font-semibold text-neutral-900">Add New Product</h1>
-            <p className="text-neutral-500">Create a new product listing</p>
-          </div>
+
+          {/* Quick Status Toggle */}
+          <Button
+            variant="outline"
+            onClick={handleToggleStatus}
+            className={cn(
+              formData.is_active 
+                ? "text-emerald-600 border-emerald-200 hover:bg-emerald-50" 
+                : "text-neutral-500 border-neutral-200 hover:bg-neutral-100"
+            )}
+          >
+            {formData.is_active ? (
+              <>
+                <Eye className="h-4 w-4 mr-2" />
+                Active
+              </>
+            ) : (
+              <>
+                <EyeOff className="h-4 w-4 mr-2" />
+                Inactive
+              </>
+            )}
+          </Button>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
@@ -252,80 +382,124 @@ export default function NewProductPage() {
                 </div>
                 <div>
                   <CardTitle className="text-lg">Product Images</CardTitle>
-                  <CardDescription>Upload up to 5 images for your product</CardDescription>
+                  <CardDescription>Manage product images (max 5)</CardDescription>
                 </div>
               </div>
             </CardHeader>
             <CardContent>
-              {/* Drop Zone */}
-              <div
-                onDragOver={handleDragOver}
-                onDragLeave={handleDragLeave}
-                onDrop={handleDrop}
-                onClick={() => fileInputRef.current?.click()}
-                className={cn(
-                  "border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all duration-200",
-                  isDragging 
-                    ? "border-neutral-900 bg-neutral-100" 
-                    : "border-neutral-200 hover:border-neutral-300 hover:bg-neutral-50"
-                )}
-              >
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  multiple
-                  onChange={handleImageSelect}
-                  className="hidden"
-                />
-                <div className="w-16 h-16 bg-neutral-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                  <Upload className="h-8 w-8 text-neutral-400" />
-                </div>
-                <p className="font-medium text-neutral-900 mb-1">
-                  Drag and drop images here
-                </p>
-                <p className="text-sm text-neutral-500">
-                  or click to browse (max 5MB per image)
-                </p>
-              </div>
-
-              {/* Image Previews */}
-              {images.length > 0 && (
-                <div className="mt-4 grid grid-cols-2 sm:grid-cols-5 gap-3">
-                  {images.map((img, index) => (
-                    <div 
-                      key={index} 
-                      className="relative aspect-square rounded-xl overflow-hidden bg-neutral-100 group"
-                    >
-                      <Image
-                        src={img.preview}
-                        alt={`Preview ${index + 1}`}
-                        fill
-                        className="object-cover"
-                      />
-                      {index === 0 && (
-                        <div className="absolute top-2 left-2">
-                          <Badge variant="default" className="text-xs">Main</Badge>
+              {/* Existing Images */}
+              {existingImages.length > 0 && (
+                <div className="mb-4">
+                  <p className="text-sm font-medium text-neutral-700 mb-2">Current Images</p>
+                  <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+                    {existingImages.map((img, index) => {
+                      const isMarkedForDeletion = imagesToDelete.includes(img.id);
+                      return (
+                        <div 
+                          key={img.id} 
+                          className={cn(
+                            "relative aspect-square rounded-xl overflow-hidden bg-neutral-100 group",
+                            isMarkedForDeletion && "opacity-50"
+                          )}
+                        >
+                          <Image
+                            src={getImageUrl(img.image)}
+                            alt={`Product image ${index + 1}`}
+                            fill
+                            className="object-cover"
+                          />
+                          {img.is_primary && !isMarkedForDeletion && (
+                            <div className="absolute top-2 left-2">
+                              <Badge variant="default" className="text-xs">Main</Badge>
+                            </div>
+                          )}
+                          {isMarkedForDeletion ? (
+                            <button
+                              type="button"
+                              onClick={() => restoreImage(img.id)}
+                              className="absolute inset-0 flex items-center justify-center bg-black/50 text-white text-sm font-medium"
+                            >
+                              Click to Restore
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => markImageForDeletion(img.id)}
+                              className="absolute top-2 right-2 p-1.5 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                            >
+                              <X className="h-3 w-3" />
+                            </button>
+                          )}
                         </div>
-                      )}
-                      <button
-                        type="button"
-                        onClick={() => removeImage(index)}
-                        className="absolute top-2 right-2 p-1.5 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* New Images */}
+              {newImages.length > 0 && (
+                <div className="mb-4">
+                  <p className="text-sm font-medium text-neutral-700 mb-2">New Images</p>
+                  <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+                    {newImages.map((img, index) => (
+                      <div 
+                        key={index} 
+                        className="relative aspect-square rounded-xl overflow-hidden bg-neutral-100 group"
                       >
-                        <X className="h-3 w-3" />
-                      </button>
-                    </div>
-                  ))}
-                  {images.length < 5 && (
-                    <button
-                      type="button"
-                      onClick={() => fileInputRef.current?.click()}
-                      className="aspect-square rounded-xl border-2 border-dashed border-neutral-200 flex items-center justify-center hover:border-neutral-300 hover:bg-neutral-50 transition-colors"
-                    >
-                      <Plus className="h-6 w-6 text-neutral-400" />
-                    </button>
+                        <Image
+                          src={img.preview}
+                          alt={`New image ${index + 1}`}
+                          fill
+                          className="object-cover"
+                        />
+                        <div className="absolute top-2 left-2">
+                          <Badge variant="secondary" className="text-xs">New</Badge>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => removeNewImage(index)}
+                          className="absolute top-2 right-2 p-1.5 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Drop Zone */}
+              {totalImageCount < 5 && (
+                <div
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  onDrop={handleDrop}
+                  onClick={() => fileInputRef.current?.click()}
+                  className={cn(
+                    "border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-all duration-200",
+                    isDragging 
+                      ? "border-neutral-900 bg-neutral-100" 
+                      : "border-neutral-200 hover:border-neutral-300 hover:bg-neutral-50"
                   )}
+                >
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    onChange={handleImageSelect}
+                    className="hidden"
+                  />
+                  <div className="w-12 h-12 bg-neutral-100 rounded-xl flex items-center justify-center mx-auto mb-3">
+                    <Upload className="h-6 w-6 text-neutral-400" />
+                  </div>
+                  <p className="font-medium text-neutral-900 text-sm">
+                    Add more images ({5 - totalImageCount} remaining)
+                  </p>
+                  <p className="text-xs text-neutral-500 mt-1">
+                    Drag and drop or click to browse
+                  </p>
                 </div>
               )}
             </CardContent>
@@ -375,13 +549,12 @@ export default function NewProductPage() {
 
               <div className="space-y-2">
                 <label className="text-sm font-medium text-neutral-700">
-                  Category *
+                  Category
                 </label>
                 <select
                   name="category_id"
                   value={formData.category_id}
                   onChange={handleInputChange}
-                  required
                   className="flex h-11 w-full rounded-xl border border-neutral-200 bg-white px-4 py-2 text-sm transition-all duration-200 ease-out ring-offset-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900 focus-visible:ring-offset-2 focus-visible:border-neutral-300 hover:border-neutral-300"
                 >
                   <option value="">Select a category</option>
@@ -415,8 +588,8 @@ export default function NewProductPage() {
                     Price *
                   </label>
                   <div className="relative">
-                    <span className="absolute left-4 top-1/2 transform -translate-y-1/2 text-neutral-500">
-                      $
+                    <span className="absolute left-4 top-1/2 transform -translate-y-1/2 text-neutral-500 text-sm">
+                      Rs.
                     </span>
                     <Input
                       type="number"
@@ -427,7 +600,7 @@ export default function NewProductPage() {
                       min="0"
                       step="0.01"
                       required
-                      className="pl-8"
+                      className="pl-10"
                     />
                   </div>
                 </div>
@@ -437,8 +610,8 @@ export default function NewProductPage() {
                     Compare at Price
                   </label>
                   <div className="relative">
-                    <span className="absolute left-4 top-1/2 transform -translate-y-1/2 text-neutral-500">
-                      $
+                    <span className="absolute left-4 top-1/2 transform -translate-y-1/2 text-neutral-500 text-sm">
+                      Rs.
                     </span>
                     <Input
                       type="number"
@@ -448,7 +621,7 @@ export default function NewProductPage() {
                       placeholder="0.00"
                       min="0"
                       step="0.01"
-                      className="pl-8"
+                      className="pl-10"
                     />
                   </div>
                   <p className="text-xs text-neutral-400">
@@ -504,7 +677,7 @@ export default function NewProductPage() {
             </CardContent>
           </Card>
 
-          {/* Status & Submit */}
+          {/* Submit */}
           <Card className="animate-fade-in-up" style={{ animationDelay: '375ms' }}>
             <CardContent className="p-6">
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
@@ -525,8 +698,12 @@ export default function NewProductPage() {
                     />
                   </button>
                   <div>
-                    <p className="font-medium text-neutral-900">Publish immediately</p>
-                    <p className="text-sm text-neutral-500">Make this product visible to customers</p>
+                    <p className="font-medium text-neutral-900">
+                      {formData.is_active ? 'Active' : 'Inactive'}
+                    </p>
+                    <p className="text-sm text-neutral-500">
+                      {formData.is_active ? 'Product is visible to customers' : 'Product is hidden from customers'}
+                    </p>
                   </div>
                 </div>
 
@@ -544,7 +721,8 @@ export default function NewProductPage() {
                     disabled={isSubmitting}
                     className="flex-1 sm:flex-none"
                   >
-                    {isSubmitting ? 'Creating...' : 'Create Product'}
+                    <Save className="h-4 w-4 mr-2" />
+                    {isSubmitting ? 'Saving...' : 'Save Changes'}
                   </Button>
                 </div>
               </div>
@@ -555,4 +733,3 @@ export default function NewProductPage() {
     </div>
   );
 }
-

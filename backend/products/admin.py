@@ -3,7 +3,21 @@ Products App - Admin Configuration
 """
 
 from django.contrib import admin
-from .models import Category, Product, ProductImage
+from django.utils.html import format_html
+from .models import Category, Product, ProductImage, CATEGORY_ICON_CHOICES
+
+
+class SubcategoryInline(admin.TabularInline):
+    """
+    Inline admin for subcategories.
+    """
+    model = Category
+    fk_name = 'parent'
+    extra = 1
+    fields = ['name', 'slug', 'icon', 'custom_icon', 'order', 'is_active']
+    prepopulated_fields = {'slug': ('name',)}
+    verbose_name = "Subcategory"
+    verbose_name_plural = "Subcategories"
 
 
 class ProductImageInline(admin.TabularInline):
@@ -18,13 +32,72 @@ class ProductImageInline(admin.TabularInline):
 @admin.register(Category)
 class CategoryAdmin(admin.ModelAdmin):
     """
-    Category Admin Configuration.
+    Category Admin Configuration with enhanced icon support.
     """
-    list_display = ['name', 'parent', 'order', 'is_active', 'created_at']
-    list_filter = ['is_active', 'parent']
+    list_display = ['name', 'display_icon_preview', 'parent', 'subcategory_count', 'product_count', 'order', 'is_active', 'created_at']
+    list_filter = ['is_active', 'parent', 'created_at']
     search_fields = ['name', 'description']
     prepopulated_fields = {'slug': ('name',)}
     ordering = ['order', 'name']
+    list_editable = ['order', 'is_active']
+    
+    inlines = [SubcategoryInline]
+    
+    fieldsets = (
+        ('Basic Information', {
+            'fields': ('name', 'slug', 'description', 'image')
+        }),
+        ('Icon Settings', {
+            'fields': ('icon', 'custom_icon'),
+            'description': 'Choose a preset icon OR enter a custom Lucide icon name. Custom icon takes priority if both are set.'
+        }),
+        ('Hierarchy', {
+            'fields': ('parent',),
+            'description': 'Leave empty to create a parent/root category. Select a parent to create a subcategory.'
+        }),
+        ('Display Settings', {
+            'fields': ('order', 'is_active')
+        }),
+    )
+    
+    def display_icon_preview(self, obj):
+        """Display the icon name with emoji preview."""
+        icon = obj.display_icon
+        if not icon:
+            return '-'
+        
+        # Find emoji from choices
+        emoji = ''
+        for choice_value, choice_label in CATEGORY_ICON_CHOICES:
+            if choice_value == icon:
+                emoji = choice_label.split(' ')[0] if ' ' in choice_label else ''
+                break
+        
+        if obj.custom_icon:
+            return format_html('<span title="Custom icon">{} (custom)</span>', icon)
+        return format_html('<span>{} {}</span>', emoji, icon)
+    
+    display_icon_preview.short_description = 'Icon'
+    
+    def subcategory_count(self, obj):
+        """Count of subcategories."""
+        count = obj.subcategories.count()
+        if count > 0:
+            return format_html('<span style="color: green; font-weight: bold;">{}</span>', count)
+        return count
+    
+    subcategory_count.short_description = 'Subcategories'
+    
+    def product_count(self, obj):
+        """Count of products in this category."""
+        count = Product.objects.filter(category=obj).count()
+        return count
+    
+    product_count.short_description = 'Products'
+    
+    def get_queryset(self, request):
+        """Optimize queryset with prefetch."""
+        return super().get_queryset(request).select_related('parent').prefetch_related('subcategories')
 
 
 @admin.register(Product)

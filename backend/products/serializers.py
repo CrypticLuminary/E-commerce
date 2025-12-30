@@ -15,11 +15,13 @@ class CategorySerializer(serializers.ModelSerializer):
     subcategories = serializers.SerializerMethodField()
     product_count = serializers.SerializerMethodField()
     full_path = serializers.ReadOnlyField()
+    display_icon = serializers.ReadOnlyField()
     
     class Meta:
         model = Category
         fields = [
             'id', 'name', 'slug', 'description', 'image',
+            'icon', 'custom_icon', 'display_icon',
             'parent', 'order', 'is_active', 'subcategories',
             'product_count', 'full_path'
         ]
@@ -38,10 +40,11 @@ class CategorySimpleSerializer(serializers.ModelSerializer):
     """
     Simple category serializer without nested subcategories.
     """
+    display_icon = serializers.ReadOnlyField()
     
     class Meta:
         model = Category
-        fields = ['id', 'name', 'slug', 'image']
+        fields = ['id', 'name', 'slug', 'image', 'display_icon']
 
 
 class ProductImageSerializer(serializers.ModelSerializer):
@@ -62,6 +65,7 @@ class ProductListSerializer(serializers.ModelSerializer):
     category = CategorySimpleSerializer(read_only=True)
     vendor_name = serializers.CharField(source='vendor.store_name', read_only=True)
     primary_image = serializers.SerializerMethodField()
+    images = ProductImageSerializer(many=True, read_only=True)
     is_in_stock = serializers.ReadOnlyField()
     discount_percentage = serializers.ReadOnlyField()
     
@@ -70,8 +74,8 @@ class ProductListSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'name', 'slug', 'short_description',
             'price', 'compare_price', 'discount_percentage',
-            'stock', 'is_in_stock', 'is_featured',
-            'category', 'vendor_name', 'primary_image',
+            'stock', 'is_in_stock', 'is_featured', 'is_active',
+            'category', 'vendor_name', 'primary_image', 'images',
             'created_at'
         ]
     
@@ -116,6 +120,8 @@ class ProductCreateSerializer(serializers.ModelSerializer):
         write_only=True,
         required=False
     )
+    description = serializers.CharField(required=False, allow_blank=True, default='')
+    slug = serializers.SlugField(required=False, allow_blank=True)
     
     class Meta:
         model = Product
@@ -128,6 +134,8 @@ class ProductCreateSerializer(serializers.ModelSerializer):
     
     def validate_slug(self, value):
         """Ensure slug is unique for the vendor."""
+        if not value:
+            return value
         vendor = self.context['request'].user.vendor_profile
         if Product.objects.filter(vendor=vendor, slug=value).exists():
             raise serializers.ValidationError(
@@ -139,6 +147,23 @@ class ProductCreateSerializer(serializers.ModelSerializer):
         """Create product with images."""
         images_data = validated_data.pop('images', [])
         vendor = self.context['request'].user.vendor_profile
+        
+        # Auto-generate slug from name if not provided
+        if not validated_data.get('slug'):
+            from django.utils.text import slugify
+            import uuid
+            base_slug = slugify(validated_data['name'])
+            slug = base_slug
+            # Ensure unique slug for this vendor
+            counter = 1
+            while Product.objects.filter(vendor=vendor, slug=slug).exists():
+                slug = f"{base_slug}-{counter}"
+                counter += 1
+            validated_data['slug'] = slug
+        
+        # Ensure description has a value
+        if not validated_data.get('description'):
+            validated_data['description'] = validated_data.get('short_description', '') or validated_data['name']
         
         product = Product.objects.create(vendor=vendor, **validated_data)
         

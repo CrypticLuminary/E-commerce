@@ -8,6 +8,42 @@ from django.core.validators import MinValueValidator
 from decimal import Decimal
 
 
+# Icon choices for categories (Lucide icon names)
+CATEGORY_ICON_CHOICES = [
+    ('', '-- Select an Icon --'),
+    ('shopping-bag', '🛍️ Shopping Bag'),
+    ('shirt', '👕 Shirt / Clothing'),
+    ('smartphone', '📱 Smartphone'),
+    ('laptop', '💻 Laptop'),
+    ('headphones', '🎧 Headphones'),
+    ('watch', '⌚ Watch'),
+    ('home', '🏠 Home'),
+    ('sofa', '🛋️ Sofa / Furniture'),
+    ('utensils', '🍴 Utensils / Kitchen'),
+    ('book', '📚 Book'),
+    ('gamepad-2', '🎮 Gaming'),
+    ('dumbbell', '🏋️ Fitness'),
+    ('bike', '🚲 Bike / Sports'),
+    ('car', '🚗 Car / Automotive'),
+    ('baby', '👶 Baby'),
+    ('heart', '❤️ Health'),
+    ('sparkles', '✨ Beauty'),
+    ('gift', '🎁 Gift'),
+    ('music', '🎵 Music'),
+    ('camera', '📷 Camera'),
+    ('tv', '📺 TV / Electronics'),
+    ('flower-2', '🌸 Garden'),
+    ('dog', '🐕 Pets'),
+    ('plane', '✈️ Travel'),
+    ('coffee', '☕ Food & Drinks'),
+    ('gem', '💎 Jewelry'),
+    ('brush', '🖌️ Art & Craft'),
+    ('wrench', '🔧 Tools'),
+    ('zap', '⚡ Electronics'),
+    ('package', '📦 General'),
+]
+
+
 class Category(models.Model):
     """
     Category model for organizing products.
@@ -18,6 +54,19 @@ class Category(models.Model):
     slug = models.SlugField(max_length=100, unique=True)
     description = models.TextField(blank=True)
     image = models.ImageField(upload_to='categories/', blank=True, null=True)
+    
+    # Icon field - choose from preset icons or use custom
+    icon = models.CharField(
+        max_length=50, 
+        choices=CATEGORY_ICON_CHOICES, 
+        blank=True,
+        help_text="Select a preset icon for this category"
+    )
+    custom_icon = models.CharField(
+        max_length=100, 
+        blank=True,
+        help_text="Or enter a custom Lucide icon name (e.g., 'shopping-cart'). See https://lucide.dev/icons"
+    )
     
     # Parent category for hierarchical structure
     parent = models.ForeignKey(
@@ -45,6 +94,11 @@ class Category(models.Model):
         if self.parent:
             return f"{self.parent.name} > {self.name}"
         return self.name
+    
+    @property
+    def display_icon(self):
+        """Return the icon to use - custom takes priority over preset."""
+        return self.custom_icon if self.custom_icon else self.icon
     
     @property
     def full_path(self):

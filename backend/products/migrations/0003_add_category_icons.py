@@ -1,0 +1,64 @@
+# Generated manually for adding category icons
+
+from django.db import migrations, models
+
+
+class Migration(migrations.Migration):
+
+    dependencies = [
+        ('products', '0002_wishlist'),
+    ]
+
+    operations = [
+        migrations.AddField(
+            model_name='category',
+            name='icon',
+            field=models.CharField(
+                blank=True, 
+                choices=[
+                    ('', '-- Select an Icon --'),
+                    ('shopping-bag', '🛍️ Shopping Bag'),
+                    ('shirt', '👕 Shirt / Clothing'),
+                    ('smartphone', '📱 Smartphone'),
+                    ('laptop', '💻 Laptop'),
+                    ('headphones', '🎧 Headphones'),
+                    ('watch', '⌚ Watch'),
+                    ('home', '🏠 Home'),
+                    ('sofa', '🛋️ Sofa / Furniture'),
+                    ('utensils', '🍴 Utensils / Kitchen'),
+                    ('book', '📚 Book'),
+                    ('gamepad-2', '🎮 Gaming'),
+                    ('dumbbell', '🏋️ Fitness'),
+                    ('bike', '🚲 Bike / Sports'),
+                    ('car', '🚗 Car / Automotive'),
+                    ('baby', '👶 Baby'),
+                    ('heart', '❤️ Health'),
+                    ('sparkles', '✨ Beauty'),
+                    ('gift', '🎁 Gift'),
+                    ('music', '🎵 Music'),
+                    ('camera', '📷 Camera'),
+                    ('tv', '📺 TV / Electronics'),
+                    ('flower-2', '🌸 Garden'),
+                    ('dog', '🐕 Pets'),
+                    ('plane', '✈️ Travel'),
+                    ('coffee', '☕ Food & Drinks'),
+                    ('gem', '💎 Jewelry'),
+                    ('brush', '🖌️ Art & Craft'),
+                    ('wrench', '🔧 Tools'),
+                    ('zap', '⚡ Electronics'),
+                    ('package', '📦 General'),
+                ], 
+                help_text='Select a preset icon for this category', 
+                max_length=50
+            ),
+        ),
+        migrations.AddField(
+            model_name='category',
+            name='custom_icon',
+            field=models.CharField(
+                blank=True, 
+                help_text="Or enter a custom Lucide icon name (e.g., 'shopping-cart'). See https://lucide.dev/icons", 
+                max_length=100
+            ),
+        ),
+    ]

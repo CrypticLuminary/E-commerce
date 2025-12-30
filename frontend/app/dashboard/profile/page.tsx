@@ -1,17 +1,22 @@
 'use client';
 
 /**
- * Profile Settings Page
+ * Profile Settings Page - Minimalist Design
  */
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, User, Save } from 'lucide-react';
+import { ArrowLeft, User, Save, Mail, Phone, UserCircle } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { apiRequest } from '@/lib/api-client';
 import { AUTH_ENDPOINTS } from '@/lib/api-config';
 import { PageLoading } from '@/components/ui/LoadingSpinner';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
 import toast from 'react-hot-toast';
 
 interface ProfileFormData {
@@ -85,96 +90,172 @@ export default function ProfilePage() {
     return null;
   }
 
-  return (
-    <div className="container-custom py-8 max-w-2xl">
-      <Link
-        href="/dashboard"
-        className="inline-flex items-center text-gray-600 hover:text-gray-900 mb-6"
-      >
-        <ArrowLeft className="h-4 w-4 mr-2" />
-        Back to Dashboard
-      </Link>
+  const getInitials = () => {
+    const first = formData.first_name?.[0] || '';
+    const last = formData.last_name?.[0] || '';
+    return (first + last).toUpperCase() || user.email[0].toUpperCase();
+  };
 
-      <div className="card p-6">
-        <div className="flex items-center gap-4 mb-6">
-          <div className="w-16 h-16 bg-primary-100 rounded-full flex items-center justify-center">
-            <User className="h-8 w-8 text-primary-600" />
+  return (
+    <div className="min-h-screen bg-neutral-50">
+      <div className="container-custom py-8 max-w-3xl animate-fade-in">
+        {/* Back Link */}
+        <Link
+          href="/dashboard"
+          className="inline-flex items-center text-neutral-500 hover:text-neutral-900 mb-6 transition-colors"
+        >
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Back to Dashboard
+        </Link>
+
+        {/* Header */}
+        <div className="flex items-center gap-4 mb-8 animate-fade-in-up">
+          <div className="p-3 bg-neutral-100 rounded-xl">
+            <UserCircle className="h-6 w-6 text-neutral-600" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Profile Settings</h1>
-            <p className="text-gray-500">Update your personal information</p>
+            <h1 className="text-2xl font-semibold text-neutral-900">Profile</h1>
+            <p className="text-neutral-500">Manage your personal information</p>
           </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                First Name
-              </label>
-              <input
-                type="text"
-                name="first_name"
-                value={formData.first_name}
-                onChange={handleInputChange}
-                className="input-field"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Last Name
-              </label>
-              <input
-                type="text"
-                name="last_name"
-                value={formData.last_name}
-                onChange={handleInputChange}
-                className="input-field"
-              />
-            </div>
-          </div>
+        <div className="space-y-6">
+          {/* Profile Card */}
+          <Card className="animate-fade-in-up" style={{ animationDelay: '75ms' }}>
+            <CardContent className="p-6">
+              <div className="flex flex-col sm:flex-row items-center gap-6">
+                {/* Avatar */}
+                <div className="w-24 h-24 bg-gradient-to-br from-neutral-200 to-neutral-300 rounded-2xl flex items-center justify-center shadow-sm">
+                  <span className="text-3xl font-semibold text-neutral-600">
+                    {getInitials()}
+                  </span>
+                </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Email Address
-            </label>
-            <input
-              type="email"
-              name="email"
-              value={formData.email}
-              disabled
-              className="input-field bg-gray-100 cursor-not-allowed"
-            />
-            <p className="text-sm text-gray-500 mt-1">
-              Email cannot be changed. Contact support if needed.
-            </p>
-          </div>
+                {/* Basic Info */}
+                <div className="text-center sm:text-left flex-1">
+                  <h2 className="text-xl font-semibold text-neutral-900">
+                    {formData.first_name || formData.last_name
+                      ? `${formData.first_name} ${formData.last_name}`.trim()
+                      : 'Add your name'}
+                  </h2>
+                  <p className="text-neutral-500 mt-1">{user.email}</p>
+                  <div className="mt-3">
+                    <Badge variant="secondary" className="capitalize">
+                      {user.role || 'Customer'}
+                    </Badge>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Phone Number
-            </label>
-            <input
-              type="tel"
-              name="phone"
-              value={formData.phone}
-              onChange={handleInputChange}
-              className="input-field"
-              placeholder="+1 (555) 000-0000"
-            />
-          </div>
+          {/* Edit Form */}
+          <Card className="animate-fade-in-up" style={{ animationDelay: '150ms' }}>
+            <CardHeader>
+              <CardTitle className="text-lg">Personal Information</CardTitle>
+              <CardDescription>Update your profile details</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleSubmit} className="space-y-6">
+                {/* Name Fields */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-neutral-700 flex items-center gap-2">
+                      <User className="h-4 w-4 text-neutral-400" />
+                      First Name
+                    </label>
+                    <Input
+                      type="text"
+                      name="first_name"
+                      value={formData.first_name}
+                      onChange={handleInputChange}
+                      placeholder="Enter first name"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-neutral-700 flex items-center gap-2">
+                      <User className="h-4 w-4 text-neutral-400" />
+                      Last Name
+                    </label>
+                    <Input
+                      type="text"
+                      name="last_name"
+                      value={formData.last_name}
+                      onChange={handleInputChange}
+                      placeholder="Enter last name"
+                    />
+                  </div>
+                </div>
 
-          <div className="flex justify-end">
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="btn-primary flex items-center gap-2 disabled:opacity-50"
-            >
-              <Save className="h-5 w-5" />
-              {isLoading ? 'Saving...' : 'Save Changes'}
-            </button>
-          </div>
-        </form>
+                <Separator />
+
+                {/* Email Field */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-neutral-700 flex items-center gap-2">
+                    <Mail className="h-4 w-4 text-neutral-400" />
+                    Email Address
+                  </label>
+                  <Input
+                    type="email"
+                    name="email"
+                    value={formData.email}
+                    disabled
+                    className="bg-neutral-50 cursor-not-allowed"
+                  />
+                  <p className="text-xs text-neutral-400">
+                    Email cannot be changed. Contact support if needed.
+                  </p>
+                </div>
+
+                {/* Phone Field */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-neutral-700 flex items-center gap-2">
+                    <Phone className="h-4 w-4 text-neutral-400" />
+                    Phone Number
+                  </label>
+                  <Input
+                    type="tel"
+                    name="phone"
+                    value={formData.phone}
+                    onChange={handleInputChange}
+                    placeholder="+977 98XXXXXXXX"
+                  />
+                </div>
+
+                {/* Submit Button */}
+                <div className="flex justify-end pt-4">
+                  <Button type="submit" disabled={isLoading}>
+                    <Save className="h-4 w-4 mr-2" />
+                    {isLoading ? 'Saving...' : 'Save Changes'}
+                  </Button>
+                </div>
+              </form>
+            </CardContent>
+          </Card>
+
+          {/* Quick Links */}
+          <Card className="animate-fade-in-up" style={{ animationDelay: '225ms' }}>
+            <CardContent className="p-6">
+              <div className="flex flex-wrap gap-3">
+                <Link href="/dashboard/settings">
+                  <Button variant="outline" size="sm">
+                    Account Settings
+                  </Button>
+                </Link>
+                <Link href="/dashboard/addresses">
+                  <Button variant="outline" size="sm">
+                    Manage Addresses
+                  </Button>
+                </Link>
+                <Link href="/orders">
+                  <Button variant="outline" size="sm">
+                    View Orders
+                  </Button>
+                </Link>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </div>
   );

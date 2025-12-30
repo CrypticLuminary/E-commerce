@@ -17,6 +17,7 @@ class Order(models.Model):
     
     STATUS_CHOICES = (
         ('pending', 'Pending'),
+        ('confirmed', 'Confirmed'),
         ('processing', 'Processing'),
         ('shipped', 'Shipped'),
         ('delivered', 'Delivered'),
@@ -131,6 +132,7 @@ class OrderItem(models.Model):
     
     STATUS_CHOICES = (
         ('pending', 'Pending'),
+        ('confirmed', 'Confirmed'),
         ('processing', 'Processing'),
         ('shipped', 'Shipped'),
         ('delivered', 'Delivered'),

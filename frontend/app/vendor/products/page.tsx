@@ -1,11 +1,12 @@
 'use client';
 
 /**
- * Vendor Products Management Page
+ * Vendor Products Management Page - Minimalist Design
  */
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import {
   ArrowLeft,
@@ -16,12 +17,19 @@ import {
   Eye,
   EyeOff,
   Package,
+  MoreVertical,
+  Filter,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { apiRequest } from '@/lib/api-client';
 import { VENDOR_ENDPOINTS, PRODUCT_ENDPOINTS } from '@/lib/api-config';
 import { formatPrice, formatDate } from '@/lib/utils';
 import { PageLoading } from '@/components/ui/LoadingSpinner';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/cn';
 import { Product } from '@/lib/types';
 import toast from 'react-hot-toast';
 
@@ -56,7 +64,6 @@ export default function VendorProductsPage() {
       setProducts(products);
     } catch (error: any) {
       console.error('Failed to fetch products:', error);
-      // If 403, user has vendor role but no vendor_profile - redirect to setup
       if (error?.response?.status === 403 || error?.status === 403) {
         router.push('/vendor/setup');
         return;
@@ -102,7 +109,6 @@ export default function VendorProductsPage() {
     return null;
   }
 
-  // Filter products
   const filteredProducts = products.filter((product) => {
     const matchesSearch = product.name
       .toLowerCase()
@@ -114,195 +120,210 @@ export default function VendorProductsPage() {
     return matchesSearch && matchesFilter;
   });
 
+  const filterButtons = [
+    { value: 'all', label: 'All', count: products.length },
+    { value: 'active', label: 'Active', count: products.filter(p => p.is_active).length },
+    { value: 'inactive', label: 'Inactive', count: products.filter(p => !p.is_active).length },
+  ];
+
   return (
-    <div className="container-custom py-8">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <Link
-            href="/vendor/dashboard"
-            className="inline-flex items-center text-gray-600 hover:text-gray-900 mb-2"
-          >
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Dashboard
-          </Link>
-          <h1 className="text-2xl font-bold text-gray-900">My Products</h1>
-          <p className="text-gray-500">{products.length} products total</p>
-        </div>
-
-        <Link href="/vendor/products/new" className="btn-primary flex items-center gap-2">
-          <Plus className="h-5 w-5" />
-          Add Product
-        </Link>
-      </div>
-
-      {/* Filters */}
-      <div className="card p-4 mb-6">
-        <div className="flex flex-col md:flex-row gap-4">
-          {/* Search */}
-          <div className="relative flex-grow">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search products..."
-              className="input-field pl-10"
-            />
-          </div>
-
-          {/* Status Filter */}
-          <div className="flex gap-2">
-            <button
-              onClick={() => setFilter('all')}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                filter === 'all'
-                  ? 'bg-primary-600 text-white'
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-              }`}
-            >
-              All
-            </button>
-            <button
-              onClick={() => setFilter('active')}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                filter === 'active'
-                  ? 'bg-green-600 text-white'
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-              }`}
-            >
-              Active
-            </button>
-            <button
-              onClick={() => setFilter('inactive')}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                filter === 'inactive'
-                  ? 'bg-gray-600 text-white'
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-              }`}
-            >
-              Inactive
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Products List */}
-      {filteredProducts.length === 0 ? (
-        <div className="card p-12 text-center">
-          <Package className="h-16 w-16 mx-auto text-gray-300" />
-          <h3 className="text-lg font-medium text-gray-900 mt-4">No products found</h3>
-          <p className="text-gray-500 mt-2">
-            {searchQuery || filter !== 'all'
-              ? 'Try adjusting your search or filter'
-              : 'Start by adding your first product'}
-          </p>
-          {!searchQuery && filter === 'all' && (
+    <div className="min-h-screen bg-neutral-50">
+      <div className="container-custom py-8 animate-fade-in">
+        {/* Header */}
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-8 animate-fade-in-up">
+          <div>
             <Link
-              href="/vendor/products/new"
-              className="btn-primary mt-4 inline-block"
+              href="/vendor/dashboard"
+              className="inline-flex items-center text-neutral-500 hover:text-neutral-900 mb-2 transition-colors"
             >
-              Add Your First Product
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Dashboard
             </Link>
-          )}
+            <div className="flex items-center gap-4">
+              <div className="p-3 bg-neutral-900 rounded-2xl">
+                <Package className="h-6 w-6 text-white" />
+              </div>
+              <div>
+                <h1 className="text-2xl font-semibold text-neutral-900">Products</h1>
+                <p className="text-neutral-500">{products.length} products total</p>
+              </div>
+            </div>
+          </div>
+
+          <Button asChild>
+            <Link href="/vendor/products/new">
+              <Plus className="h-4 w-4 mr-2" />
+              Add Product
+            </Link>
+          </Button>
         </div>
-      ) : (
-        <div className="card overflow-hidden">
-          <table className="w-full">
-            <thead className="bg-gray-50 border-b">
-              <tr>
-                <th className="text-left p-4 font-semibold text-gray-600">Product</th>
-                <th className="text-left p-4 font-semibold text-gray-600 hidden md:table-cell">
-                  Price
-                </th>
-                <th className="text-left p-4 font-semibold text-gray-600 hidden md:table-cell">
-                  Stock
-                </th>
-                <th className="text-left p-4 font-semibold text-gray-600">Status</th>
-                <th className="text-right p-4 font-semibold text-gray-600">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y">
-              {filteredProducts.map((product) => (
-                <tr key={product.id} className="hover:bg-gray-50">
-                  <td className="p-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 bg-gray-100 rounded flex-shrink-0" />
-                      <div>
-                        <p className="font-medium text-gray-900">{product.name}</p>
-                        <p className="text-sm text-gray-500 md:hidden">
-                          {formatPrice(product.price)} • Stock: {product.stock}
-                        </p>
-                      </div>
+
+        {/* Filters */}
+        <Card className="mb-6 animate-fade-in-up" style={{ animationDelay: '75ms' }}>
+          <CardContent className="p-4">
+            <div className="flex flex-col md:flex-row gap-4">
+              {/* Search */}
+              <div className="relative flex-grow">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-neutral-400" />
+                <Input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search products..."
+                  className="pl-10"
+                />
+              </div>
+
+              {/* Filter Buttons */}
+              <div className="flex gap-2">
+                {filterButtons.map((btn) => (
+                  <Button
+                    key={btn.value}
+                    variant={filter === btn.value ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setFilter(btn.value as typeof filter)}
+                    className="min-w-[80px]"
+                  >
+                    {btn.label}
+                    <Badge 
+                      variant="secondary" 
+                      className={cn(
+                        "ml-2",
+                        filter === btn.value ? "bg-white/20 text-white" : ""
+                      )}
+                    >
+                      {btn.count}
+                    </Badge>
+                  </Button>
+                ))}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Products Grid/List */}
+        {filteredProducts.length === 0 ? (
+          <Card className="animate-fade-in-up" style={{ animationDelay: '150ms' }}>
+            <CardContent className="py-16 text-center">
+              <div className="w-20 h-20 bg-neutral-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                <Package className="h-10 w-10 text-neutral-400" />
+              </div>
+              <h3 className="text-lg font-medium text-neutral-900 mb-2">No products found</h3>
+              <p className="text-neutral-500 mb-6">
+                {searchQuery || filter !== 'all'
+                  ? 'Try adjusting your search or filter'
+                  : 'Start by adding your first product'}
+              </p>
+              {!searchQuery && filter === 'all' && (
+                <Button asChild>
+                  <Link href="/vendor/products/new">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Your First Product
+                  </Link>
+                </Button>
+              )}
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {filteredProducts.map((product, index) => {
+              // Get image URL from primary_image or images array
+              const imageUrl = product.primary_image?.image || product.images?.[0]?.image;
+              const fullImageUrl = imageUrl ? (imageUrl.startsWith('http') ? imageUrl : `http://localhost:8000${imageUrl}`) : null;
+              
+              return (
+              <Card 
+                key={product.id} 
+                className="overflow-hidden hover:shadow-md transition-all duration-300 animate-fade-in-up group"
+                style={{ animationDelay: `${(index + 2) * 50}ms` }}
+              >
+                <div className="aspect-video bg-neutral-100 relative overflow-hidden">
+                  {fullImageUrl ? (
+                    <Image
+                      src={fullImageUrl}
+                      alt={product.name}
+                      fill
+                      className="object-contain bg-white group-hover:scale-105 transition-transform duration-300"
+                    />
+                  ) : (
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <Package className="h-12 w-12 text-neutral-300" />
                     </div>
-                  </td>
-                  <td className="p-4 hidden md:table-cell">
-                    <p className="font-medium">{formatPrice(product.price)}</p>
-                    {product.compare_price && (
-                      <p className="text-sm text-gray-400 line-through">
-                        {formatPrice(product.compare_price)}
-                      </p>
-                    )}
-                  </td>
-                  <td className="p-4 hidden md:table-cell">
-                    <span
-                      className={`${
-                        product.stock === 0
-                          ? 'text-red-600'
-                          : product.stock < 10
-                          ? 'text-yellow-600'
-                          : 'text-gray-900'
-                      }`}
-                    >
-                      {product.stock}
-                    </span>
-                  </td>
-                  <td className="p-4">
-                    <span
-                      className={`px-2 py-1 text-xs font-medium rounded ${
-                        product.is_active
-                          ? 'bg-green-100 text-green-800'
-                          : 'bg-gray-100 text-gray-800'
-                      }`}
-                    >
+                  )}
+                  {/* Status Badge */}
+                  <div className="absolute top-3 left-3">
+                    <Badge variant={product.is_active ? 'success' : 'secondary'}>
                       {product.is_active ? 'Active' : 'Inactive'}
-                    </span>
-                  </td>
-                  <td className="p-4">
-                    <div className="flex items-center justify-end gap-2">
-                      <button
-                        onClick={() => handleToggleStatus(product.id, product.is_active)}
-                        className="p-2 hover:bg-gray-100 rounded"
-                        title={product.is_active ? 'Deactivate' : 'Activate'}
+                    </Badge>
+                  </div>
+                  {/* Quick Actions */}
+                  <div className="absolute top-3 right-3 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <Button
+                      variant="secondary"
+                      size="icon"
+                      className="h-8 w-8 bg-white/90 hover:bg-white"
+                      onClick={() => handleToggleStatus(product.id, product.is_active)}
+                    >
+                      {product.is_active ? (
+                        <EyeOff className="h-4 w-4" />
+                      ) : (
+                        <Eye className="h-4 w-4" />
+                      )}
+                    </Button>
+                    <Link href={`/vendor/products/${product.id}/edit`}>
+                      <Button
+                        variant="secondary"
+                        size="icon"
+                        className="h-8 w-8 bg-white/90 hover:bg-white"
                       >
-                        {product.is_active ? (
-                          <EyeOff className="h-4 w-4 text-gray-500" />
-                        ) : (
-                          <Eye className="h-4 w-4 text-gray-500" />
-                        )}
-                      </button>
-                      <Link
-                        href={`/vendor/products/${product.id}/edit`}
-                        className="p-2 hover:bg-gray-100 rounded"
-                        title="Edit"
-                      >
-                        <Edit className="h-4 w-4 text-gray-500" />
-                      </Link>
-                      <button
-                        onClick={() => handleDelete(product.id)}
-                        className="p-2 hover:bg-red-50 rounded"
-                        title="Delete"
-                      >
-                        <Trash2 className="h-4 w-4 text-red-500" />
-                      </button>
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                    </Link>
+                    <Button
+                      variant="secondary"
+                      size="icon"
+                      className="h-8 w-8 bg-white/90 hover:bg-white hover:text-red-600"
+                      onClick={() => handleDelete(product.id)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+                <CardContent className="p-4">
+                  <h3 className="font-medium text-neutral-900 truncate mb-1">
+                    {product.name}
+                  </h3>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-semibold text-neutral-900">
+                        {formatPrice(product.price)}
+                      </p>
+                      {product.compare_price && (
+                        <p className="text-sm text-neutral-400 line-through">
+                          {formatPrice(product.compare_price)}
+                        </p>
+                      )}
                     </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+                    <div className="text-right">
+                      <p className={cn(
+                        "text-sm font-medium",
+                        product.stock === 0 
+                          ? "text-red-600" 
+                          : product.stock < 10 
+                          ? "text-amber-600" 
+                          : "text-neutral-600"
+                      )}>
+                        {product.stock} in stock
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+              );
+            })}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

@@ -14,6 +14,7 @@ from .views import (
     
     # Vendor views
     VendorOrderListView,
+    VendorOrderItemListView,
     VendorOrderItemsView,
     VendorUpdateOrderItemStatusView,
     
@@ -35,6 +36,7 @@ urlpatterns = [
     
     # Vendor endpoints
     path('vendor/list/', VendorOrderListView.as_view(), name='vendor_orders'),
+    path('vendor/items/', VendorOrderItemListView.as_view(), name='vendor_order_items_list'),
     path('vendor/<str:order_number>/', VendorOrderItemsView.as_view(), name='vendor_order_items'),
     path('vendor/item/<int:item_id>/status/', VendorUpdateOrderItemStatusView.as_view(), name='vendor_update_item_status'),
     

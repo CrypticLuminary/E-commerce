@@ -187,11 +187,11 @@ export default function WishlistPage() {
                   
                   <div className="mt-2 flex items-center gap-2">
                     <span className="font-semibold text-neutral-900">
-                      ${Number(item.product.price).toFixed(2)}
+                      Rs. {Number(item.product.price).toFixed(2)}
                     </span>
                     {item.product.compare_price && Number(item.product.compare_price) > Number(item.product.price) && (
                       <span className="text-sm text-neutral-400 line-through">
-                        ${Number(item.product.compare_price).toFixed(2)}
+                        Rs. {Number(item.product.compare_price).toFixed(2)}
                       </span>
                     )}
                   </div>

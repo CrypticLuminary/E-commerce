@@ -1,17 +1,21 @@
 'use client';
 
 /**
- * Vendor Setup Page - Register as a vendor
+ * Vendor Setup Page - Register as a vendor - Minimalist Design
  */
 
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Store, ArrowLeft, Info } from 'lucide-react';
+import { Store, ArrowLeft, Info, Mail, Phone, MapPin, CheckCircle2, Sparkles } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { apiRequest } from '@/lib/api-client';
 import { VENDOR_ENDPOINTS } from '@/lib/api-config';
 import { PageLoading } from '@/components/ui/LoadingSpinner';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Separator } from '@/components/ui/separator';
 import toast from 'react-hot-toast';
 
 interface VendorFormData {
@@ -27,6 +31,7 @@ export default function VendorSetupPage() {
   const { user, isAuthenticated, isLoading: authLoading, refreshUser } = useAuth();
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [agreeToTerms, setAgreeToTerms] = useState(false);
   const [formData, setFormData] = useState<VendorFormData>({
     store_name: '',
     description: '',
@@ -45,7 +50,6 @@ export default function VendorSetupPage() {
     return null;
   }
 
-  // If already a vendor, redirect to vendor dashboard
   if (user.role === 'vendor') {
     router.push('/vendor/dashboard');
     return null;
@@ -63,6 +67,11 @@ export default function VendorSetupPage() {
 
     if (!formData.store_name.trim()) {
       toast.error('Store name is required');
+      return;
+    }
+
+    if (!agreeToTerms) {
+      toast.error('Please agree to the seller agreement');
       return;
     }
 
@@ -88,150 +97,218 @@ export default function VendorSetupPage() {
     }
   };
 
+  const steps = [
+    { step: 1, label: 'Fill out store information' },
+    { step: 2, label: 'Submit for review' },
+    { step: 3, label: 'Get approved & start selling' },
+    { step: 4, label: 'Earn from your products' },
+  ];
+
   return (
-    <div className="container-custom py-8 max-w-2xl">
-      <Link
-        href="/dashboard"
-        className="inline-flex items-center text-gray-600 hover:text-gray-900 mb-6"
-      >
-        <ArrowLeft className="h-4 w-4 mr-2" />
-        Back to Dashboard
-      </Link>
+    <div className="min-h-screen bg-neutral-50">
+      <div className="container-custom py-8 max-w-4xl animate-fade-in">
+        <Link
+          href="/dashboard"
+          className="inline-flex items-center text-neutral-500 hover:text-neutral-900 mb-6 transition-colors"
+        >
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Back to Dashboard
+        </Link>
 
-      <div className="card p-6">
-        <div className="flex items-center gap-4 mb-6">
-          <div className="p-3 bg-primary-100 rounded-lg">
-            <Store className="h-8 w-8 text-primary-600" />
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Left Column - Info */}
+          <div className="lg:col-span-1 space-y-6">
+            {/* Header Card */}
+            <Card className="animate-fade-in-up">
+              <CardContent className="pt-6">
+                <div className="text-center">
+                  <div className="w-16 h-16 bg-neutral-900 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                    <Sparkles className="h-8 w-8 text-white" />
+                  </div>
+                  <h1 className="text-2xl font-semibold text-neutral-900 mb-2">Become a Seller</h1>
+                  <p className="text-neutral-500">Start your journey as a marketplace seller</p>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* How it Works */}
+            <Card className="animate-fade-in-up" style={{ animationDelay: '50ms' }}>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <Info className="h-4 w-4 text-neutral-500" />
+                  How it works
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {steps.map((item, index) => (
+                  <div key={item.step} className="flex items-start gap-3">
+                    <div className="w-6 h-6 bg-neutral-100 rounded-full flex items-center justify-center flex-shrink-0 text-sm font-medium text-neutral-600">
+                      {item.step}
+                    </div>
+                    <span className="text-sm text-neutral-600 pt-0.5">{item.label}</span>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+
+            {/* Seller Terms */}
+            <Card className="animate-fade-in-up" style={{ animationDelay: '100ms' }}>
+              <CardHeader>
+                <CardTitle className="text-base">Seller Terms</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {[
+                  { label: 'Platform commission', value: '10% per sale' },
+                  { label: 'Payment processing', value: '7-14 business days' },
+                  { label: 'Responsibilities', value: 'Product quality & shipping' },
+                ].map((term) => (
+                  <div key={term.label} className="flex justify-between text-sm">
+                    <span className="text-neutral-500">{term.label}</span>
+                    <span className="text-neutral-900 font-medium">{term.value}</span>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
           </div>
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Become a Seller</h1>
-            <p className="text-gray-500">Start selling on our marketplace</p>
-          </div>
+
+          {/* Right Column - Form */}
+          <Card className="lg:col-span-2 animate-fade-in-up" style={{ animationDelay: '150ms' }}>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Store className="h-5 w-5 text-neutral-500" />
+                Store Information
+              </CardTitle>
+              <CardDescription>Tell us about your store</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleSubmit} className="space-y-6">
+                <div>
+                  <label className="block text-sm font-medium text-neutral-700 mb-1.5">
+                    Store Name *
+                  </label>
+                  <Input
+                    type="text"
+                    name="store_name"
+                    value={formData.store_name}
+                    onChange={handleInputChange}
+                    placeholder="Your store name"
+                    required
+                  />
+                  <p className="text-xs text-neutral-400 mt-1.5">
+                    This will be displayed to customers
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-neutral-700 mb-1.5">
+                    Store Description
+                  </label>
+                  <textarea
+                    name="description"
+                    value={formData.description}
+                    onChange={handleInputChange}
+                    placeholder="Tell customers about your store, what you sell, and what makes you unique..."
+                    rows={4}
+                    className="w-full px-3 py-2 rounded-xl border border-neutral-200 focus:outline-none focus:ring-2 focus:ring-neutral-900 focus:border-transparent transition-all resize-none"
+                  />
+                </div>
+
+                <Separator />
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-neutral-700 mb-1.5">
+                      Contact Email
+                    </label>
+                    <div className="relative">
+                      <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-neutral-400" />
+                      <Input
+                        type="email"
+                        name="contact_email"
+                        value={formData.contact_email}
+                        onChange={handleInputChange}
+                        placeholder={user.email}
+                        className="pl-10"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-neutral-700 mb-1.5">
+                      Contact Phone
+                    </label>
+                    <div className="relative">
+                      <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-neutral-400" />
+                      <Input
+                        type="tel"
+                        name="contact_phone"
+                        value={formData.contact_phone}
+                        onChange={handleInputChange}
+                        placeholder="+1 (555) 000-0000"
+                        className="pl-10"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-neutral-700 mb-1.5">
+                    Business Address
+                  </label>
+                  <div className="relative">
+                    <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-neutral-400" />
+                    <Input
+                      type="text"
+                      name="business_address"
+                      value={formData.business_address}
+                      onChange={handleInputChange}
+                      placeholder="Your business address"
+                      className="pl-10"
+                    />
+                  </div>
+                </div>
+
+                <Separator />
+
+                {/* Agreement Checkbox */}
+                <div 
+                  onClick={() => setAgreeToTerms(!agreeToTerms)}
+                  className="flex items-start gap-3 p-4 rounded-xl border border-neutral-200 cursor-pointer hover:bg-neutral-50 transition-colors"
+                >
+                  <div className={`w-5 h-5 rounded-lg border-2 flex items-center justify-center flex-shrink-0 mt-0.5 transition-colors ${
+                    agreeToTerms ? 'bg-neutral-900 border-neutral-900' : 'border-neutral-300'
+                  }`}>
+                    {agreeToTerms && <CheckCircle2 className="h-3 w-3 text-white" />}
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-neutral-900">I agree to the Seller Agreement</p>
+                    <p className="text-xs text-neutral-500 mt-0.5">
+                      By checking this box, you agree to our platform terms, commission rates, and seller policies.
+                    </p>
+                  </div>
+                </div>
+
+                <Button
+                  type="submit"
+                  disabled={isSubmitting || !agreeToTerms}
+                  className="w-full"
+                  size="lg"
+                >
+                  {isSubmitting ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+                      Submitting...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="h-4 w-4 mr-2" />
+                      Submit Application
+                    </>
+                  )}
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
         </div>
-
-        {/* Info Box */}
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-          <div className="flex gap-3">
-            <Info className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
-            <div className="text-sm text-blue-800">
-              <p className="font-medium mb-1">How it works:</p>
-              <ol className="list-decimal list-inside space-y-1">
-                <li>Fill out your store information below</li>
-                <li>Submit your application for review</li>
-                <li>Once approved, you can start adding products</li>
-                <li>Earn money when customers buy your products</li>
-              </ol>
-            </div>
-          </div>
-        </div>
-
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Store Name *
-            </label>
-            <input
-              type="text"
-              name="store_name"
-              value={formData.store_name}
-              onChange={handleInputChange}
-              placeholder="Your store name"
-              required
-              className="input-field"
-            />
-            <p className="text-sm text-gray-500 mt-1">
-              This will be displayed to customers
-            </p>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Store Description
-            </label>
-            <textarea
-              name="description"
-              value={formData.description}
-              onChange={handleInputChange}
-              placeholder="Tell customers about your store..."
-              rows={4}
-              className="input-field resize-none"
-            />
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Contact Email
-              </label>
-              <input
-                type="email"
-                name="contact_email"
-                value={formData.contact_email}
-                onChange={handleInputChange}
-                placeholder={user.email}
-                className="input-field"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Contact Phone
-              </label>
-              <input
-                type="tel"
-                name="contact_phone"
-                value={formData.contact_phone}
-                onChange={handleInputChange}
-                placeholder="+1 (555) 000-0000"
-                className="input-field"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Business Address
-            </label>
-            <input
-              type="text"
-              name="business_address"
-              value={formData.business_address}
-              onChange={handleInputChange}
-              placeholder="Your business address"
-              className="input-field"
-            />
-          </div>
-
-          {/* Terms */}
-          <div className="bg-gray-50 rounded-lg p-4">
-            <h3 className="font-medium text-gray-900 mb-2">Seller Agreement</h3>
-            <ul className="text-sm text-gray-600 space-y-1">
-              <li>• Platform commission: 10% per sale</li>
-              <li>• Payment processing time: 7-14 business days</li>
-              <li>• You're responsible for product quality and shipping</li>
-              <li>• Account may be suspended for policy violations</li>
-            </ul>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <input
-              type="checkbox"
-              id="agree"
-              required
-              className="h-4 w-4 text-primary-600 rounded"
-            />
-            <label htmlFor="agree" className="text-sm text-gray-700">
-              I agree to the Seller Agreement and Platform Terms
-            </label>
-          </div>
-
-          <button
-            type="submit"
-            disabled={isSubmitting}
-            className="btn-primary w-full py-3 disabled:opacity-50"
-          >
-            {isSubmitting ? 'Submitting...' : 'Submit Application'}
-          </button>
-        </form>
       </div>
     </div>
   );
