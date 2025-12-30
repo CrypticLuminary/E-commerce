@@ -1,0 +1,24 @@
+"""
+AG-EcOM Backend - Main URL Configuration
+"""
+
+from django.contrib import admin
+from django.urls import path, include
+from django.conf import settings
+from django.conf.urls.static import static
+
+urlpatterns = [
+    path('admin/', admin.site.urls),
+    
+    # API Routes
+    path('api/auth/', include('accounts.urls')),
+    path('api/products/', include('products.urls')),
+    path('api/cart/', include('cart.urls')),
+    path('api/orders/', include('orders.urls')),
+    path('api/vendors/', include('vendors.urls')),
+]
+
+# Serve media files in development
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+    urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
